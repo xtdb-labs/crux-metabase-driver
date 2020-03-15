@@ -1,15 +1,31 @@
 # Complete list of options here: https://github.com/metabase/metabase/wiki/Metabase-Plugin-Manifest-Reference
 info:
-  name: Metabase Sudoku Driver
+  name: Metabase Dremio Driver
   version: 1.0.0
-  description: Generates SuDoKuS
+  description: Generates Dremio
 driver:
-  name: sudoku
+  name: dremio
+  display-name: Dremio
   lazy-load: true
-  # https://github.com/metabase/metabase/blob/master/src/metabase/driver/common.clj
+  parent: sql-jdbc
   connection-properties:
-    - name: your-name
-      display-name: Your name
+    - host
+    - merge:
+        - port
+        - placeholder: 31010
+    - merge:
+        - dbname
+        - name: dbname
+        - placeholder: database
+    - user
+    - password
+    - ssl
+    - merge:
+        - additional-options
+        - placeholder: "trustServerCertificate=false"
+  connection-properties-include-tunnel-config: true
 init:
   - step: load-namespace
-    namespace: metabase.driver.sudoku
+    namespace: metabase.driver.dremio
+  - step: register-jdbc-driver
+    class: com.dremio.jdbc.Driver

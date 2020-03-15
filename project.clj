@@ -1,18 +1,13 @@
-(defproject metabase/sudoku-driver "1.0.0"
+(defproject metabase/dremio-driver "1.0.0"
   :min-lein-version "2.5.0"
 
   :dependencies
-  [[org.clojure/core.logic "0.8.11"
-    :exclusions [org.clojure/clojure]]]
-
-  :jvm-opts
-  ["-XX:+IgnoreUnrecognizedVMOptions"
-   "--add-modules=java.xml.bind"]
+  [[com.dremio/dremio "4.1.7"]]
 
   :profiles
   {:provided
    {:dependencies
-    [[org.clojure/clojure "1.9.0"]
+    [[org.clojure/clojure "1.10.1"]
      [metabase-core "1.0.0-SNAPSHOT"]]}
 
    :uberjar
@@ -21,4 +16,4 @@
     :omit-source true
     :javac-options ["-target" "1.8", "-source" "1.8"]
     :target-path   "target/%s"
-    :uberjar-name  "sudoku.metabase-driver.jar"}})
+    :uberjar-name  "dremio.metabase-driver.jar"}})
