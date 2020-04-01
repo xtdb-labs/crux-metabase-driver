@@ -2,29 +2,40 @@
 info:
   name: Metabase Dremio Driver
   version: 1.0.0
-  description: Generates Dremio
+  description: Allows Metabase to connect to Dremio.
 driver:
-  name: dremio
-  display-name: Dremio
-  lazy-load: true
-  parent: sql-jdbc
-  connection-properties:
-    - host
-    - merge:
-        - port
-        - placeholder: 31010
-    - merge:
-        - dbname
-        - name: dbname
-        - placeholder: database
-    - user
-    - password
-    - ssl
-    - merge:
-        - additional-options
-        - placeholder: "trustServerCertificate=false"
-  connection-properties-include-tunnel-config: true
+  - name: hive-like
+    lazy-load: true
+    abstract: true
+    parent: sql-jdbc
+  - name: sparksql
+    lazy-load: true
+    parent: hive-like
+  - name: dremio
+    display-name: Dremio
+    lazy-load: true
+    parent: sparksql
+    connection-properties:
+      - host
+      - merge:
+          - port
+          - placeholder: 31010
+      - merge:
+          - dbname
+          - name: dbname
+          - placeholder: database
+      - user
+      - password
+      - ssl
+      - merge:
+          - additional-options
+          - placeholder: "trustServerCertificate=false"
+    connection-properties-include-tunnel-config: true
 init:
+  - step: load-namespace
+    namespace: metabase.driver.hive-like
+  - step: load-namespace
+    namespace: metabase.driver.sparksql
   - step: load-namespace
     namespace: metabase.driver.dremio
   - step: register-jdbc-driver

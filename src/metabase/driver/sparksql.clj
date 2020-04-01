@@ -2,6 +2,7 @@
   (:require [clojure
              [set :as set]
              [string :as str]]
+            [clojure.tools.logging :as log]
             [clojure.java.jdbc :as jdbc]
             [honeysql
              [core :as hsql]
@@ -21,6 +22,7 @@
             [metabase.query-processor
              [store :as qp.store]
              [util :as qputil]]
+            [metabase.util.i18n :refer [trs]]
             [metabase.util.honeysql-extensions :as hx])
   (:import [java.sql Connection ResultSet]))
 
@@ -143,13 +145,16 @@
 ;; 4.  SparkSQL doesn't support setting the default result set holdability
 (defmethod sql-jdbc.execute/connection-with-timezone :sparksql
   [driver database ^String timezone-id]
-  (let [conn (.getConnection (sql-jdbc.execute/datasource database))]
-    (try
-      (.setTransactionIsolation conn Connection/TRANSACTION_READ_UNCOMMITTED)
-      conn
-      (catch Throwable e
-        (.close conn)
-        (throw e)))))
+  (let [datasource (sql-jdbc.execute/datasource database)]
+    (.setReadOnly true)
+    (.setAutoCommit true)
+    (.setTransactionIsolation Connection/TRANSACTION_NONE)
+    (let [conn (.getConnection datasource)]
+      (try
+        conn
+        (catch Throwable e
+          (.close conn)
+          (throw e))))))
 
 ;; 1.  SparkSQL doesn't support setting holdability type to `CLOSE_CURSORS_AT_COMMIT`
 (defmethod sql-jdbc.execute/prepared-statement :sparksql
@@ -165,7 +170,6 @@
         (.close stmt)
         (throw e)))))
 
-
 (doseq [feature [:basic-aggregations
                  :binning
                  :expression-aggregations
@@ -179,5 +183,7 @@
 ;; implementation, and we don't want to stomp over that if it was loaded already
 (when-not (get (methods driver/supports?) [:sparksql :foreign-keys])
   (defmethod driver/supports? [:sparksql :foreign-keys] [_ _] true))
+
+(defmethod driver/supports? [:sparksql :transaction] [_ _] false)
 
 (defmethod sql.qp/quote-style :sparksql [_] :mysql)
