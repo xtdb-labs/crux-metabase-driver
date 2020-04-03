@@ -110,132 +110,23 @@
        :sendTimeAsDatetime false}
       (sql-jdbc.common/handle-additional-options details, :seperator-style :semicolon)))
 
-;; (defn- dremio
-;;   "Create a database specification for a Dremio database."
-;;   [{:keys [user password db host port ssl]
-;;     :or   {user "dbuser", password "dbpassword", host "localhost", db "schema", port 31010}
-;;     :as   opts}]
-;;   (merge
-;;    {:applicationName    config/mb-app-id-string
-;;     :type :dremio
-;;     :subprotocol "dremio"
-;;     :subname (str "direct=" host ":" port ";schema=" db)
-;;     :user user
-;;     :password password
-;;     :host host
-;;     :port port
-;;     :classname "com.dremio.jdbc.Driver"
-;;     :loginTimeout 10
-;;     :encrypt (boolean ssl)
-;;     :sendTimeAsDatetime false}
-;;    (dissoc opts :host :port :jdbc-flags)))
-                  
-;; (defmethod sql-jdbc.conn/connection-details->spec :dremio
-;;   [_ details]
-;;   (-> details
-;;       (update :port (fn [port]
-;;                       (if (string? port)
-;;                         (Integer/parseInt port)
-;;                         port)))
-;;       (set/rename-keys {:dbname :db})
-;;       dremio
-;;       (sql-jdbc.common/handle-additional-options details)))
-                  
-;; (defn- dash-to-underscore [s]
-;;   (when s
-;;     (str/replace s #"-" "_")))
-                  
-;; ;; workaround for SPARK-9686 Spark Thrift server doesn't return correct JDBC metadata
-;; (defmethod driver/describe-database :dremio
-;;   [_ {:keys [details] :as database}]
-;;   {:tables
-;;    (with-open [conn (jdbc/get-connection (sql-jdbc.conn/db->pooled-connection-spec database))]
-;;      (set
-;;       (for [{:keys [database tablename tab_name]} (jdbc/query {:connection conn} ["show tables"])]
-;;         {:name   (or tablename tab_name) ; column name differs depending on server (Dremio, hive, Impala)
-;;          :schema (when (seq database)
-;;                    database)})))})
-                  
-;; ;; Hive describe table result has commented rows to distinguish partitions
-;; (defn- valid-describe-table-row? [{:keys [col_name data_type]}]
-;;   (every? (every-pred (complement str/blank?)
-;;                       (complement #(str/starts-with? % "#")))
-;;           [col_name data_type]))
-                  
-;; ;; workaround for SPARK-9686 Spark Thrift server doesn't return correct JDBC metadata
-;; (defmethod driver/describe-table :dremio
-;;   [driver {:keys [details] :as database} {table-name :name, schema :schema, :as table}]
-;;   {:name   table-name
-;;    :schema schema
-;;    :fields
-;;    (with-open [conn (jdbc/get-connection (sql-jdbc.conn/db->pooled-connection-spec database))]
-;;      (let [results (jdbc/query {:connection conn} [(format
-;;                                                     "describe %s"
-;;                                                     (sql.u/quote-name driver :table
-;;                                                                       (dash-to-underscore schema)
-;;                                                                       (dash-to-underscore table-name)))])]
-;;        (set
-;;         (for [{col-name :col_name, data-type :data_type, :as result} results
-;;               :when                                                  (valid-describe-table-row? result)]
-;;           {:name          col-name
-;;            :database-type data-type
-;;            :base-type     (sql-jdbc.sync/database-type->base-type :hive-base (keyword data-type))}))))})
-                  
-;; ;; bound variables are not supported in Spark SQL (maybe not Hive either, haven't checked)
-;; (defmethod driver/execute-reducible-query :dremio
-;;   [driver {:keys [database settings], {sql :query, :keys [params], :as inner-query} :native, :as outer-query} context respond]
-;;   (let [inner-query (-> (assoc inner-query
-;;                                :remark (qputil/query->remark outer-query)
-;;                                :query  (if (seq params)
-;;                                          (unprepare/unprepare driver (cons sql params))
-;;                                          sql)
-;;                                :max-rows (mbql.u/query->max-rows-limit outer-query))
-;;                         (dissoc :params))
-;;         query       (assoc outer-query :native inner-query)]
-;;     ((get-method driver/execute-reducible-query :sql-jdbc) driver query context respond)))
-                  
-;; ;; 1.  Dremio doesn't support `.supportsTransactionIsolationLevel`
-;; ;; 2.  Dremio doesn't support session timezones (at least our driver doesn't support it)
-;; ;; 3.  Dremio doesn't support making connections read-only
-;; ;; 4.  Dremio doesn't support setting the default result set holdability
-;; (defmethod sql-jdbc.execute/connection-with-timezone :dremio
-;;   [driver database ^String timezone-id]
-;;   (let [conn (.getConnection (sql-jdbc.execute/datasource database))]
-;;     (try
-;;       (.setTransactionIsolation conn Connection/TRANSACTION_READ_UNCOMMITTED)
-;;       conn
-;;       (catch Throwable e
-;;         (.close conn)
-;;         (throw e)))))
-                  
-;; 1.  Dremio doesn't support setting holdability type to `CLOSE_CURSORS_AT_COMMIT`
-;; (defmethod sql-jdbc.execute/prepared-statement :dremio
-;;   [driver ^Connection conn ^String sql params]
-;;   (let [stmt (.prepareStatement conn sql
-;;                                 ResultSet/TYPE_FORWARD_ONLY
-;;                                 ResultSet/CONCUR_READ_ONLY)]
-;;     (try
-;;       (.setFetchDirection stmt ResultSet/FETCH_FORWARD)
-;;       (sql-jdbc.execute/set-parameters! driver stmt params)
-;;       stmt
-;;       (catch Throwable e
-;;         (.close stmt)
-;;         (throw e)))))
-                  
-;; (doseq [feature [:basic-aggregations
-;;                  :binning
-;;                  :expression-aggregations
-;;                  :expressions
-;;                  :native-parameters
-;;                  :nested-queries
-;;                  :standard-deviation-aggregations]]
-;;   (defmethod driver/supports? [:dremio feature] [_ _] true))
-                  
-;; ;; only define an implementation for `:foreign-keys` if none exists already. In test extensions we define an alternate
-;; ;; implementation, and we don't want to stomp over that if it was loaded already
-;; (when-not (get (methods driver/supports?) [:dremio :foreign-keys])
-;;   (defmethod driver/supports? [:dremio :foreign-keys] [_ _] true))
-                  
-;; (defmethod driver/supports? [:dremio :transaction]                     [_ _] false)
-                  
+;; See the list here: https://docs.microsoft.com/en-us/sql/connect/jdbc/using-basic-data-types
+(defmethod sql-jdbc.sync/database-type->base-type :dremio
+  [_ column-type]
+  ({:bigint           :type/BigInteger
+    :boolean          :type/Boolean
+    :date             :type/DateTime
+    :decimal          :type/Decimal
+    :double           :type/Float
+    :float            :type/Float
+    :int              :type/Integer
+    :interval         :type/Time
+    :list             :type/*
+    :struct           :type/*
+    :time             :type/Time
+    :timestamp        :type/*
+    :varbinary        :type/*
+    :varchar          :type/Text
+    :xml              :type/Text} column-type)) ; auto-incrementing integer (ie pk) field
+
 (defmethod sql.qp/quote-style :dremio [_] :ansi)

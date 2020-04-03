@@ -30,36 +30,36 @@
 
 ;;; ------------------------------------------ Custom HoneySQL Clause Impls ------------------------------------------
 
-(def ^:private source-table-alias
-  "Default alias for all source tables. (Not for source queries; those still use the default SQL QP alias of `source`.)"
-  "t1")
+; (def ^:private source-table-alias
+;   "Default alias for all source tables. (Not for source queries; those still use the default SQL QP alias of `source`.)"
+;   "t1")
 
-;; use `source-table-alias` for the source Table, e.g. `t1.field` instead of the normal `schema.table.field`
-(defmethod sql.qp/->honeysql [:sparksql (class Field)]
-  [driver field]
-  (binding [sql.qp/*table-alias* (or sql.qp/*table-alias* source-table-alias)]
-    ((get-method sql.qp/->honeysql [:hive-like (class Field)]) driver field)))
+; ;; use `source-table-alias` for the source Table, e.g. `t1.field` instead of the normal `schema.table.field`
+; (defmethod sql.qp/->honeysql [:sparksql (class Field)]
+;   [driver field]
+;   (binding [sql.qp/*table-alias* (or sql.qp/*table-alias* source-table-alias)]
+;     ((get-method sql.qp/->honeysql [:hive-like (class Field)]) driver field)))
 
-(defmethod sql.qp/apply-top-level-clause [:sparksql :page] [_ _ honeysql-form {{:keys [items page]} :page}]
-  (let [offset (* (dec page) items)]
-    (if (zero? offset)
-      ;; if there's no offset we can simply use limit
-      (h/limit honeysql-form items)
-      ;; if we need to do an offset we have to do nesting to generate a row number and where on that
-      (let [over-clause (format "row_number() OVER (%s)"
-                                (first (hsql/format (select-keys honeysql-form [:order-by])
-                                                    :allow-dashed-names? true
-                                                    :quoting :mysql)))]
-        (-> (apply h/select (map last (:select honeysql-form)))
-            (h/from (h/merge-select honeysql-form [(hsql/raw over-clause) :__rownum__]))
-            (h/where [:> :__rownum__ offset])
-            (h/limit items))))))
+; (defmethod sql.qp/apply-top-level-clause [:sparksql :page] [_ _ honeysql-form {{:keys [items page]} :page}]
+;   (let [offset (* (dec page) items)]
+;     (if (zero? offset)
+;       ;; if there's no offset we can simply use limit
+;       (h/limit honeysql-form items)
+;       ;; if we need to do an offset we have to do nesting to generate a row number and where on that
+;       (let [over-clause (format "row_number() OVER (%s)"
+;                                 (first (hsql/format (select-keys honeysql-form [:order-by])
+;                                                     :allow-dashed-names? true
+;                                                     :quoting :mysql)))]
+;         (-> (apply h/select (map last (:select honeysql-form)))
+;             (h/from (h/merge-select honeysql-form [(hsql/raw over-clause) :__rownum__]))
+;             (h/where [:> :__rownum__ offset])
+;             (h/limit items))))))
 
-(defmethod sql.qp/apply-top-level-clause [:sparksql :source-table]
-  [driver _ honeysql-form {source-table-id :source-table}]
-  (let [{table-name :name, schema :schema} (qp.store/table source-table-id)]
-    (h/from honeysql-form [(sql.qp/->honeysql driver (hx/identifier :table schema table-name))
-                           (sql.qp/->honeysql driver (hx/identifier :table-alias source-table-alias))])))
+; (defmethod sql.qp/apply-top-level-clause [:sparksql :source-table]
+;   [driver _ honeysql-form {source-table-id :source-table}]
+;   (let [{table-name :name, schema :schema} (qp.store/table source-table-id)]
+;     (h/from honeysql-form [(sql.qp/->honeysql driver (hx/identifier :table schema table-name))
+;                            (sql.qp/->honeysql driver (hx/identifier :table-alias source-table-alias))])))
 
 
 ;;; ------------------------------------------- Other Driver Method Impls --------------------------------------------
@@ -90,54 +90,54 @@
   (when s
     (str/replace s #"-" "_")))
 
-;; workaround for SPARK-9686 Spark Thrift server doesn't return correct JDBC metadata
-(defmethod driver/describe-database :sparksql
-  [_ {:keys [details] :as database}]
-  {:tables
-   (with-open [conn (jdbc/get-connection (sql-jdbc.conn/db->pooled-connection-spec database))]
-     (set
-      (for [{:keys [database tablename tab_name]} (jdbc/query {:connection conn} ["show tables"])]
-        {:name   (or tablename tab_name) ; column name differs depending on server (SparkSQL, hive, Impala)
-         :schema (when (seq database)
-                   database)})))})
+; ;; workaround for SPARK-9686 Spark Thrift server doesn't return correct JDBC metadata
+; (defmethod driver/describe-database :sparksql
+;   [_ {:keys [details] :as database}]
+;   {:tables
+;    (with-open [conn (jdbc/get-connection (sql-jdbc.conn/db->pooled-connection-spec database))]
+;      (set
+;       (for [{:keys [database tablename tab_name]} (jdbc/query {:connection conn} ["show tables"])]
+;         {:name   (or tablename tab_name) ; column name differs depending on server (SparkSQL, hive, Impala)
+;          :schema (when (seq database)
+;                    database)})))})
 
-;; Hive describe table result has commented rows to distinguish partitions
-(defn- valid-describe-table-row? [{:keys [col_name data_type]}]
-  (every? (every-pred (complement str/blank?)
-                      (complement #(str/starts-with? % "#")))
-          [col_name data_type]))
+; ; ;; Hive describe table result has commented rows to distinguish partitions
+; ; (defn- valid-describe-table-row? [{:keys [col_name data_type]}]
+; ;   (every? (every-pred (complement str/blank?)
+; ;                       (complement #(str/starts-with? % "#")))
+; ;           [col_name data_type]))
 
-;; workaround for SPARK-9686 Spark Thrift server doesn't return correct JDBC metadata
-(defmethod driver/describe-table :sparksql
-  [driver {:keys [details] :as database} {table-name :name, schema :schema, :as table}]
-  {:name   table-name
-   :schema schema
-   :fields
-   (with-open [conn (jdbc/get-connection (sql-jdbc.conn/db->pooled-connection-spec database))]
-     (let [results (jdbc/query {:connection conn} [(format
-                                                    "describe %s"
-                                                    (sql.u/quote-name driver :table
-                                                      (dash-to-underscore schema)
-                                                      (dash-to-underscore table-name)))])]
-       (set
-        (for [{col-name :col_name, data-type :data_type, :as result} results
-              :when                                                  (valid-describe-table-row? result)]
-          {:name          col-name
-           :database-type data-type
-           :base-type     (sql-jdbc.sync/database-type->base-type :hive-like (keyword data-type))}))))})
+; ;; workaround for SPARK-9686 Spark Thrift server doesn't return correct JDBC metadata
+; (defmethod driver/describe-table :sparksql
+;   [driver {:keys [details] :as database} {table-name :name, schema :schema, :as table}]
+;   {:name   table-name
+;    :schema schema
+;    :fields
+;    (with-open [conn (jdbc/get-connection (sql-jdbc.conn/db->pooled-connection-spec database))]
+;      (let [results (jdbc/query {:connection conn} [(format
+;                                                     "describe %s"
+;                                                     (sql.u/quote-name driver :table
+;                                                       (dash-to-underscore schema)
+;                                                       (dash-to-underscore table-name)))])]
+;        (set
+;         (for [{col-name :col_name, data-type :data_type, :as result} results
+;               :when                                                  (valid-describe-table-row? result)]
+;           {:name          col-name
+;            :database-type data-type
+;            :base-type     (sql-jdbc.sync/database-type->base-type :hive-like (keyword data-type))}))))})
 
-;; bound variables are not supported in Spark SQL (maybe not Hive either, haven't checked)
-(defmethod driver/execute-reducible-query :sparksql
-  [driver {:keys [database settings], {sql :query, :keys [params], :as inner-query} :native, :as outer-query} context respond]
-  (let [inner-query (-> (assoc inner-query
-                               :remark (qputil/query->remark outer-query)
-                               :query  (if (seq params)
-                                         (unprepare/unprepare driver (cons sql params))
-                                         sql)
-                               :max-rows (mbql.u/query->max-rows-limit outer-query))
-                        (dissoc :params))
-        query       (assoc outer-query :native inner-query)]
-    ((get-method driver/execute-reducible-query :sql-jdbc) driver query context respond)))
+; ;; bound variables are not supported in Spark SQL (maybe not Hive either, haven't checked)
+; (defmethod driver/execute-reducible-query :sparksql
+;   [driver {:keys [database settings], {sql :query, :keys [params], :as inner-query} :native, :as outer-query} context respond]
+;   (let [inner-query (-> (assoc inner-query
+;                                :remark (qputil/query->remark outer-query)
+;                                :query  (if (seq params)
+;                                          (unprepare/unprepare driver (cons sql params))
+;                                          sql)
+;                                :max-rows (mbql.u/query->max-rows-limit outer-query))
+;                         (dissoc :params))
+;         query       (assoc outer-query :native inner-query)]
+;     ((get-method driver/execute-reducible-query :sql-jdbc) driver query context respond)))
 
 ;; 1.  SparkSQL doesn't support `.supportsTransactionIsolationLevel`
 ;; 2.  SparkSQL doesn't support session timezones (at least our driver doesn't support it)

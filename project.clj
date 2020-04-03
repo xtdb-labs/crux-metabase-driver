@@ -19,7 +19,7 @@
                  org.slf4j/slf4j-log4j12
                  org.tukaani/xz]]
    ;; TODO - this is deprecated, seems like we'll want to upgrade to `org.apache.hive/hive-jdbc` in the future. Don't
-   ;; thing it works with Spark SQL atm however
+   ;; think it works with Spark SQL atm however
    [org.apache.hive/hive-jdbc "1.2.1"
     :exclusions
     [#_com.google.guava/guava
