@@ -1,5 +1,7 @@
 # Sample Metabase Driver: Dremio
 
+:warning: [Some things doesn't work !](TODO.md)
+
 ![screenshot](screenshots/dremio-driver.png)
 
 All you need you do is drop the driver in your `plugins/` directory. You can grab it [here](https://github.com/metabase/dremio-driver/releases/download/1.0.0/dremio.metabase-driver.jar) or build it yourself:
