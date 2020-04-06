@@ -1,3 +1,11 @@
+# Before anything else !
+
+At every time you upload a new version of the driver, please think about :
+- Restarting metabase service,
+- Dropping the datasource in Metabase, and recreating it (with the new version of the driver applied)
+
+If you don't do that, you'll become crazy very quickly...
+
 # What is working ?
 
 - [x] Connect to Dremio
@@ -14,8 +22,8 @@
 
 # What doesn't work at all ?
 
-- [ ] Date types (if a field is set as Date or DateTime, all queries using it will fail)
+- [ ] Ask SQL questions doesn't work, because of non aliasing schema + table in front of column names
 
 # What else ?
 
-- [ ] Reduce driver size (100 Mo today), by removing hive and sparksql dependencies
+- [x] Reduce driver size (100 Mo today), by removing hive and sparksql dependencies > Now 26Mo with p6spy for logging sql requests

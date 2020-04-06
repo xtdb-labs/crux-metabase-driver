@@ -4,17 +4,10 @@ info:
   version: 1.0.0
   description: Allows Metabase to connect to Dremio.
 driver:
-  - name: hive-like
-    lazy-load: true
-    abstract: true
-    parent: sql-jdbc
-  - name: sparksql
-    lazy-load: true
-    parent: hive-like
   - name: dremio
     display-name: Dremio
     lazy-load: true
-    parent: sparksql
+    parent: sql-jdbc
     connection-properties:
       - host
       - merge:
@@ -23,9 +16,13 @@ driver:
       - merge:
           - dbname
           - name: dbname
-          - placeholder: database
+          - placeholder: schema
       - user
       - password
+      - name: isdebug
+        display-name: Debug mode (Enable spy.log file in metabase root folder)
+        type: boolean
+        default: false
       - ssl
       - merge:
           - additional-options
@@ -33,10 +30,8 @@ driver:
     connection-properties-include-tunnel-config: true
 init:
   - step: load-namespace
-    namespace: metabase.driver.hive-like
-  - step: load-namespace
-    namespace: metabase.driver.sparksql
-  - step: load-namespace
     namespace: metabase.driver.dremio
+  - step: register-jdbc-driver
+    class: com.p6spy.engine.spy.P6SpyDriver
   - step: register-jdbc-driver
     class: com.dremio.jdbc.Driver
