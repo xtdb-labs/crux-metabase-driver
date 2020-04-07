@@ -27,3 +27,4 @@ If you don't do that, you'll become crazy very quickly...
 # What else ?
 
 - [x] Reduce driver size (100 Mo today), by removing hive and sparksql dependencies > Now 26Mo with p6spy for logging sql requests
+- [x] Get some JDBC logs (enable debug mode when connecting to database, it creates a spy.log file > [p6spy](https://github.com/p6spy/p6spy))
