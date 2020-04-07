@@ -25,12 +25,6 @@ Grab [lein-localrepo](https://github.com/kumarshantanu/lein-localrepo) first if 
 lein localrepo install lib/dremio-jdbc-driver-4.1.7.jar com.dremio/dremio 4.1.7
 ```
 
-### Prereq: Install sparksql driver as a local maven dependency
-
-```bash
-lein localrepo install lib/sparksql.metabase-driver.jar metabase.driver/sparksql 1.0.0
-```
-
 ### Build the Dremio driver
 
 ```bash
