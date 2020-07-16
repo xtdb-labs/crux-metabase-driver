@@ -2,7 +2,8 @@
   :min-lein-version "2.5.0"
 
   :dependencies
-  [[com.dremio/dremio "4.1.7"]
+  [[juxt/crux-sql "20.07-1.10.0-alpha-SNAPSHOT"]
+   [org.apache.calcite.avatica/avatica-core "1.16.0"]
    [p6spy/p6spy "3.9.0"]]
   
   :aot :all     ; Checks for compile-time failures when building the uberjar

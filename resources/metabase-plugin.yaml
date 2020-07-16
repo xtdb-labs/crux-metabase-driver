@@ -5,14 +5,14 @@ info:
   description: Allows Metabase to connect to Dremio.
 driver:
   - name: dremio
-    display-name: Dremio
+    display-name: Crux
     lazy-load: true
     parent: sql-jdbc
     connection-properties:
       - host
       - merge:
           - port
-          - placeholder: 31010
+          - placeholder: 1501
       - merge:
           - dbname
           - name: dbname
@@ -34,4 +34,4 @@ init:
   - step: register-jdbc-driver
     class: com.p6spy.engine.spy.P6SpyDriver
   - step: register-jdbc-driver
-    class: com.dremio.jdbc.Driver
+    class: org.apache.calcite.avatica.remote.Driver

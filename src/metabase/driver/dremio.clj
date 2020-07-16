@@ -42,6 +42,7 @@
             [toucan.db :as db])
   (:import [java.sql Connection PreparedStatement DatabaseMetaData ResultSet ResultSetMetaData Types]
            [java.time LocalDate LocalDateTime LocalTime OffsetDateTime OffsetTime ZonedDateTime]
+           org.apache.calcite.avatica.remote.Driver
            java.util.Date
            javax.sql.DataSource
            metabase.util.honeysql_extensions.Identifier))
@@ -52,7 +53,7 @@
 ;;; |                                             metabase.driver impls                                              |
 ;;; +----------------------------------------------------------------------------------------------------------------+
 
-(defmethod driver/display-name :dremio [_] "Dremio")
+(defmethod driver/display-name :dremio [_] "Crux")
      
 ;;; +----------------------------------------------------------------------------------------------------------------+
 ;;; ----------------------------------------------------- Impls ------------------------------------------------------
@@ -60,17 +61,17 @@
                   
 (defmethod sql-jdbc.conn/connection-details->spec :dremio
   [_ {:keys [user password dbname host port ssl isdebug]
-      :or {user "dbuser", password "dbpassword", host "localhost", dbname "Dremio", port 31010}
+      :or {user "dbuser", password "dbpassword", host "localhost", dbname "Crux", port 1501}
       :as details}]
   (-> {:applicationName    config/mb-app-id-string
        :type :dremio
-       :subprotocol (if isdebug "p6spy:dremio" "dremio")
-       :subname (str "direct=" host ":" port ";schema=" dbname)
+       :subprotocol (if isdebug "p6spy:avatica:remote" "avatica:remote")
+       :subname (str "url=" host ":" port ";serialization=protobuf");schema=" dbname)
        :user user
        :password password
        :host host
        :port port
-       :classname (if isdebug "com.p6spy.engine.spy.P6SpyDriver" "com.dremio.jdbc.Driver")
+       :classname (if isdebug "com.p6spy.engine.spy.P6SpyDriver" "org.apache.calcite.avatica.remote.Driver")
        :loginTimeout 10
        :encrypt (boolean ssl)
        :sendTimeAsDatetime false}
