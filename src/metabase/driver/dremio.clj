@@ -106,7 +106,7 @@
 ;    {"preferredTestQuery" "SELECT 1"}))
 
 (defmethod driver/can-connect? :dremio [driver details]
-  (let [connection (sql-jdbc.conn/connection-details->spec driver (ssh/include-ssh-tunnel details))]
+  (let [connection (sql-jdbc.conn/connection-details->spec driver (ssh/include-ssh-tunnel! details))]
     (= 1 (first (vals (first (jdbc/query connection ["SELECT count(1)"])))))))
 
 (defmethod sql-jdbc.sync/database-type->base-type :dremio
