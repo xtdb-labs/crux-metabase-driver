@@ -7,12 +7,14 @@
    [p6spy/p6spy "3.9.0"]]
   
   :aot :all     ; Checks for compile-time failures when building the uberjar
+
+  :repositories {"local" "file:repo"}
   
   :profiles
   {:provided
    {:dependencies
     [[org.clojure/clojure "1.10.1"]
-     [metabase-core "1.0.0-SNAPSHOT"]
+     [metabase-core "1.40"]  ;; you might need to update this version. Refer to uberjar
      ]}
 
    :uberjar

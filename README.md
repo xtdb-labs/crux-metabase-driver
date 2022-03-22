@@ -4,7 +4,7 @@
 
 ![screenshot](screenshots/dremio-driver.png)
 
-All you need you do is drop the driver in your `plugins/` directory. You can grab it [here](https://github.com/metabase/dremio-driver/releases/download/1.0.0/dremio.metabase-driver.jar) or build it yourself:
+All you need you do is drop the driver in your `plugins/` directory. It's fairly easy to build this yourself:
 
 ## Building the driver 
 
@@ -14,7 +14,17 @@ Clone the [Metabase repo](https://github.com/metabase/metabase) first if you hav
 
 ```bash
 cd /path/to/metabase_source
-lein install-for-building-drivers
+clojure -X:deps prep
+cd modules/drivers
+clojure -X:deps prep
+cd ../..
+clojure -T:build uberjar
+```
+
+Navigate to the directory where the uberjar was built and run
+
+```bash
+mvn install:install-file -Durl=file:repo -DgroupId=local -DartifactId=metabase-core -Dversion=1.40 -Dpackaging=jar -Dfile=metabase.jar
 ```
 
 ### Prereq: Install dremio driver as a local maven dependency
@@ -46,5 +56,5 @@ jar -jar /path/to/metabase/metabase.jar
 mkdir -p /path/to/metabase_source/plugins
 cp target/uberjar/dremio.metabase-driver.jar /path/to/metabase_source/plugins/
 cd /path/to/metabase_source
-lein run
+clojure -M:run
 ```
